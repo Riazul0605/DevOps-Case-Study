@@ -155,3 +155,9 @@ Answer:
 Possible Issue: If the pod’s memory utilization exceeds the 1500Mi limit, Kubernetes could trigger a OOMKill (Out of Memory Kill), causing the pod to be terminated and restarted. 
 This could be the most likely cause of random restarts, especially if there are occasional memory spikes that cause the pod to exceed the limit.
 
+Helm
+Please use the accompanied elasticsearch helm template to create a Kubernetes deployment of elasticsearch.  
+Provide a screenshot & deployment yaml of the resultant deployment in Kubernetes.  
+
+Answer:
+

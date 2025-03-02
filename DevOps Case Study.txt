@@ -1,0 +1,8 @@
+Configuration management:
+
+1)	Which ansible command can display all ansible_ configuration for a host.
+
+Answer: ansible <hostname> -m setup
+
+        Where <hostname> is the name of the target host.
+

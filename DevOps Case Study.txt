@@ -4,5 +4,154 @@ Configuration management:
 
 Answer: ansible <hostname> -m setup
 
-        Where <hostname> is the name of the target host.
+Where <hostname> is the name of the target host.
+
+2)	Please configure a cron job that runs logrotate on all machines every 10 minutes between 2h - 4h.
+
+Answer: We can use Ansible to configure this cron job.
+
+---
+- name: Configure logrotate cron job
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure cron job for logrotate is present
+      cron:
+        name: "Run logrotate every 10 minutes between 2h - 4h"
+        minute: "*/10"
+        hour: "2-4"
+        job: "/usr/sbin/logrotate /etc/logrotate.conf"
+        state: present
+
+Save the above playbook to a file, e.g., logrotate-cron.yml
+
+Run the playbook with the following command:
+
+ansible-playbook -i <inventory_file> logrotate-cron.yml
+
+This playbook will ensure the cron job is added to all the hosts defined in your inventory.
+
+3)	Please deploy ntpd package to the following 3 servers:
+
+Answer: We can use Ansible to deploy ntpd package to our 3 servers.
+
+Create the inventory file as below:
+
+# Define a group of hosts
+# All hosts
+[all]
+app-vm1.fra1.internal
+db-vm1.fra1.db
+web-vm1.fra1.web
+
+Save the file as inventory.conf
+
+
+Now create an ansible playbook as below:
+
+---
+- name: Deploy ntpd package with custom config
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install ntpd package
+      package:
+        name: ntp
+        state: present
+
+    - name: Copy custom ntpd config file
+      copy:
+        src: /path/to/local/ntpd.conf  # Path to your local custom ntpd.conf
+        dest: /etc/ntp.conf  # Path to the ntp.conf on the remote machine
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes  # Optional: creates a backup of the file if it already exists
+
+    - name: Ensure ntpd service is started and enabled
+      service:
+        name: ntp
+        state: started
+        enabled: yes
+
+Save the playbook as deploy_ntpd.yml.
+
+Run the playbook with the following command:
+
+ansible-playbook -i inventory.conf deploy_ntpd.yml
+
+Docker/Kubernetes:
+
+1)	Prepare a docker-compose for a nginx server.
+
+Answer:
+
+To create a Custom Bridge Network run the following command:
+
+docker network create \
+  --driver bridge \
+  --subnet 172.20.8.0/24 \
+  my_custom_bridge_network
+  
+To survive logs between nginx container restarts we should first create a local directory on our host machine to store the Nginx logs. 
+
+mkdir -p ~/nginx-logs
+
+This directory will be mounted to the Nginx container.
+
+Ensure Correct Permissions for the Log Directory.
+
+sudo chown -R 1000:1000 ~/nginx-logs
+
+Now create a docker-compose.yml that specifies the custom bridge network:
+
+version: '3'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx-server
+    ports:
+      - "80:80"  # Map port 80 on host to port 80 on the container
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf  # Custom Nginx config
+      - ./html:/usr/share/nginx/html        # Web content (e.g., index.html)
+	  - ~/nginx-logs:/var/log/nginx         # Mount logs to persist between container restarts
+    networks:
+      - my_custom_bridge_network
+    restart: unless-stopped
+
+networks:
+  my_custom_bridge_network:
+    external: true  # Use the existing custom network created earlier
+
+Save the file as docker-compose.yaml
+
+Now run the docker compose file as below:
+
+docker-compose up -d
+
+2)	Which Kubernetes command you will use to identify the reason for a pod restart in the project "internal" under namespace "production".
+
+Answer:
+
+kubectl describe pod -n production -l app=internal
+
+3)	Consider the followings:
+POD                          NAME                        CPU(cores)   MEMORY(bytes)
+java-app-7d9d44ccbf-lmvbc   java-app                     3m                 951Mi
+java-app-7d9d44ccbf-lmvbc   java-app-logrotate           1m                 45Mi
+java-app-7d9d44ccbf-lmvbc   java-app-fluentd             1m                 84Mi
+java-app-7d9d44ccbf-lmvbc   mongos                       4m                 62Mi
+
+Application pod has the following resource quota:
+•	Memory request & limit: 1000 & 1500
+•	CPU request & limit: 1000 & 2000
+•	Xmx of 1000M
+Java-app keep restarting at random.  From Kubernetes configuration perspective, what are the possible reasons for the pod restarts?
+
+Answer:
+
+Possible Issue: If the pod’s memory utilization exceeds the 1500Mi limit, Kubernetes could trigger a OOMKill (Out of Memory Kill), causing the pod to be terminated and restarted. 
+This could be the most likely cause of random restarts, especially if there are occasional memory spikes that cause the pod to exceed the limit.
 
